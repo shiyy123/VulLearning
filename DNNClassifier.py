@@ -75,6 +75,7 @@ if __name__ == '__main__':
 
     prediction = torch.max(out, 1)[1].cuda()  # 1返回index  0返回原值
     pred_y = prediction.data.cpu().numpy()
+    print(pred_y)
     test_y = labels.reshape(1, -1)
     target_y = torch.from_numpy(test_y).long().data.cpu().numpy()
     accuracy = float((pred_y == target_y).astype(int).sum()) / float(target_y.size)
