@@ -3,6 +3,9 @@ import torch
 import torch.utils.data as Data
 import numpy as np
 import pandas as pd
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def get_data(csv_path):
@@ -44,11 +47,11 @@ class DNNNet(nn.Module):
         return outputs
 
     def train(self, x, label):
-        out = self.forward(x)  # 正向传播
-        loss = self.mse(out, label)  # 根据正向传播计算损失
-        self.optim.zero_grad()  # 梯度清零
-        loss.backward()  # 计算梯度
-        self.optim.step()  # 应用梯度更新参数
+        out = self.forward(x)
+        loss = self.mse(out, label)
+        self.optim.zero_grad()
+        loss.backward()
+        self.optim.step()
 
     def test(self, test_):
         return self.fc(test_)
@@ -57,19 +60,22 @@ class DNNNet(nn.Module):
 if __name__ == '__main__':
     data, labels, train, test, train_label, test_label = get_data('G:\\share\\training_data\\func.csv')
     net = DNNNet()
+    net.cuda()
     train_dataset = Data.TensorDataset(torch.from_numpy(train).float(), torch.from_numpy(train_label).long())
     BATCH_SIZE = 1
     train_loader = Data.DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     for epoch in range(100):
         for step, (x, y) in enumerate(train_loader):
             y = torch.reshape(y, [BATCH_SIZE])
-            net.train(x, y)
+            net.train(x.cuda(), y.cuda())
             if epoch % 20 == 0:
                 print('Epoch: ', epoch, '| Step: ', step, '| batch y: ', y.numpy())
-    out = net.test(torch.from_numpy(data).float())
-    prediction = torch.max(out, 1)[1]  # 1返回index  0返回原值
-    pred_y = prediction.data.numpy()
+
+    out = net.test(torch.from_numpy(data).cuda().float())
+
+    prediction = torch.max(out, 1)[1].cuda()  # 1返回index  0返回原值
+    pred_y = prediction.data.cpu().numpy()
     test_y = labels.reshape(1, -1)
-    target_y = torch.from_numpy(test_y).long().data.numpy()
+    target_y = torch.from_numpy(test_y).long().data.cpu().numpy()
     accuracy = float((pred_y == target_y).astype(int).sum()) / float(target_y.size)
-    print("预测准确率", accuracy)
+    print("accuracy=", accuracy)
